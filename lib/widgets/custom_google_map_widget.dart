@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:map_example/models/places_model.dart';
 
 class CustomGoogleMapWidget extends StatefulWidget {
   const CustomGoogleMapWidget({super.key});
@@ -11,6 +12,13 @@ class CustomGoogleMapWidget extends StatefulWidget {
 class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
   late GoogleMapController googleMapController;
   String? _mapStyle;
+  final Set<Marker> _markers = {};
+
+  @override
+  void initState() {
+    initMapStyle();
+    super.initState();
+  }
 
   @override
   void dispose() {
@@ -25,18 +33,32 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
     });
   }
 
+  void initMapMarkers() {
+    var myMarkers = places
+        .map(
+          (places) => Marker(
+            position: places.latLong,
+            markerId: MarkerId(places.id),
+          ),
+        )
+        .toSet();
+    _markers.addAll(myMarkers);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         GoogleMap(
+          style: _mapStyle,
+          markers: _markers,
           onMapCreated: (controller) {
             googleMapController = controller;
-            initMapStyle();
+            //  googleMapController.setMapStyle(_mapStyle);
+            initMapMarkers();
           },
-          style: _mapStyle,
           initialCameraPosition: const CameraPosition(
-            zoom: 13,
+            zoom: 14,
             target: LatLng(30.04422632972928, 31.247551793100282),
           ),
         ),
@@ -46,17 +68,15 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
           right: 10,
           child: ElevatedButton(
             onPressed: () {
-              setState(() {
-                googleMapController.animateCamera(
-                  CameraUpdate.newLatLng(
-                    const LatLng(31.78383500939122, 35.07237155452735),
-                  ),
-                );
-              });
+              googleMapController.animateCamera(
+                CameraUpdate.newLatLng(
+                  const LatLng(31.78383500939122, 35.07237155452735),
+                ),
+              );
             },
-            child: const Text('change direction'),
+            child: const Text('Change direction'),
           ),
-        )
+        ),
       ],
     );
   }
