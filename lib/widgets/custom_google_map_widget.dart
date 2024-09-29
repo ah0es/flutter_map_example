@@ -20,7 +20,8 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
   void initState() {
     initMapStyle();
     location = Location();
-    initLocationServices();
+    requestForLocationServices();
+    requestForPermisionLocation();
     super.initState();
   }
 
@@ -37,7 +38,7 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
     });
   }
 
-  initLocationServices() async {
+  requestForLocationServices() async {
     var isServiceEnabled = await location.serviceEnabled();
     if (!isServiceEnabled) {
       var isRequestService = await location.requestService();
@@ -45,6 +46,31 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
         print('ss');
       }
     }
+  }
+
+  Future<bool> requestForPermisionLocation() async {
+    var isPermission = await location.hasPermission();
+    if (isPermission == PermissionStatus.deniedForever) {
+      return false;
+    }
+    if (isPermission == PermissionStatus.denied) {
+      location.requestPermission();
+      if (isPermission != PermissionStatus.granted) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  void getLocationData() {
+    location.onLocationChanged.listen((locationData) {});
+  }
+
+  void updateMyLocationData() async {
+    await requestForPermisionLocation();
+    await requestForLocationServices();
+    getLocationData();
   }
 
   void initMapMarkers() {
