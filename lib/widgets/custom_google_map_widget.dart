@@ -1,7 +1,7 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
-import 'package:map_example/models/places_model.dart';
+import 'package:map_example/utils/location_serivces.dart';
 
 class CustomGoogleMapWidget extends StatefulWidget {
   const CustomGoogleMapWidget({super.key});
@@ -14,14 +14,11 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
   late GoogleMapController googleMapController;
   String? _mapStyle;
   final Set<Marker> _markers = {};
-  final Set<Polyline> _polyLines = {};
-  late Location location;
+  late LocationService locationService;
   @override
   void initState() {
-    initMapStyle();
-    location = Location();
-    requestForLocationServices();
-    requestForPermisionLocation();
+    locationService = LocationService();
+    //initMapStyle();
     super.initState();
   }
 
@@ -31,86 +28,23 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
     super.dispose();
   }
 
-  void initMapStyle() async {
-    var mapNightMode = await DefaultAssetBundle.of(context).loadString('assets/map_styles/map_styles_night_mode.json');
-    setState(() {
-      _mapStyle = mapNightMode;
-    });
-  }
-
-  requestForLocationServices() async {
-    var isServiceEnabled = await location.serviceEnabled();
-    if (!isServiceEnabled) {
-      var isRequestService = await location.requestService();
-      if (isRequestService) {
-        print('ss');
-      }
-    }
-  }
-
-  Future<bool> requestForPermisionLocation() async {
-    var isPermission = await location.hasPermission();
-    if (isPermission == PermissionStatus.deniedForever) {
-      return false;
-    }
-    if (isPermission == PermissionStatus.denied) {
-      location.requestPermission();
-      if (isPermission != PermissionStatus.granted) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  void getLocationData() {
-    location.onLocationChanged.listen((locationData) {});
-  }
-
-  void updateMyLocationData() async {
-    await requestForPermisionLocation();
-    await requestForLocationServices();
-    getLocationData();
-  }
-
-  void initMapMarkers() {
-    var myMarkers = places
-        .map(
-          (places) => Marker(
-            position: places.latLong,
-            markerId: MarkerId(places.id),
-          ),
-        )
-        .toSet();
-    _markers.addAll(myMarkers);
-  }
-
-  void initPolyLines() {
-    const myPolyLines = Polyline(startCap: Cap.roundCap, color: Colors.red, polylineId: PolylineId('1'), points: [
-      LatLng(27.243644005046896, 31.17669837899221),
-      LatLng(27.221916394928794, 31.13309209071705),
-      LatLng(27.266672616962804, 31.149413763848838),
-      LatLng(27.2464447097953, 31.102592099353522)
-    ]);
-
-    setState(() {
-      _polyLines.add(myPolyLines);
-    });
-  }
+  // void initMapStyle() async {
+  //   var mapNightMode = await DefaultAssetBundle.of(context).loadString('assets/map_styles/map_styles_night_mode.json');
+  //   setState(() {
+  //     _mapStyle = mapNightMode;
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         GoogleMap(
-          polylines: _polyLines,
           style: _mapStyle,
           markers: _markers,
           onMapCreated: (controller) {
             googleMapController = controller;
-            //  googleMapController.setMapStyle(_mapStyle);
-            initMapMarkers();
-            initPolyLines();
+            getUserLocation();
           },
           initialCameraPosition: const CameraPosition(
             zoom: 14,
@@ -134,5 +68,23 @@ class _CustomGoogleMapWidgetState extends State<CustomGoogleMapWidget> {
         ),
       ],
     );
+  }
+
+  void getUserLocation() async {
+    try {
+      var locationData = await locationService.getCurrentLocation();
+      LatLng initialPosition = LatLng(locationData.latitude!, locationData.longitude!);
+      googleMapController.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: initialPosition, zoom: 16),
+        ),
+      );
+      _markers.add(
+        Marker(markerId: const MarkerId('1'), position: initialPosition),
+      );
+      setState(() {});
+    } catch (e) {
+      log('getCurrentLocation $e');
+    }
   }
 }
